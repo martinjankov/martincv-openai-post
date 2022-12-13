@@ -6,8 +6,14 @@
 		$submitButton.on("click", function (e) {
 			e.preventDefault();
 
-			const { select } = wp.data;
-			const title = select("core/editor").getEditedPostAttribute("title");
+			let title = "";
+
+			if (typeof wp.data == "undefined") {
+				title = $("input[name=post_title]").val();
+			} else {
+				const { select } = wp.data;
+				title = select("core/editor").getEditedPostAttribute("title");
+			}
 
 			const formData = new FormData();
 			formData.append("post_title", title);
@@ -32,12 +38,20 @@
 				success: function (response) {
 					let text = response.data.split("\n\n");
 
-					text.forEach(function (p) {
-						let newBlock = wp.blocks.createBlock("core/paragraph", {
-							content: p,
+					if (typeof wp.data == "undefined") {
+						let content = "";
+						text.forEach(function (p) {
+							content += p;
 						});
-						wp.data.dispatch("core/block-editor").insertBlocks(newBlock);
-					});
+						tinyMCE.activeEditor.setContent(content);
+					} else {
+						text.forEach(function (p) {
+							let newBlock = wp.blocks.createBlock("core/paragraph", {
+								content: p,
+							});
+							wp.data.dispatch("core/block-editor").insertBlocks(newBlock);
+						});
+					}
 
 					$submitButton.prop("disabled", false);
 					$submitButton.text("Generate Post");
