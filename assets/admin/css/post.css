@@ -1,0 +1,17 @@
+.martincv-openai-post__field {
+	margin-bottom: 15px;
+}
+
+.martincv-openai-post__field label {
+	font-weight: bold;
+	margin-bottom: 5px;
+}
+
+.martincv-openai-post__field em {
+	font-size: 10px;
+	line-height: 0.9;
+}
+
+.martincv-openai-post__field a {
+	font-size: 12px;
+}

@@ -52,11 +52,18 @@ class Post {
 		}
 
 		wp_enqueue_script(
-			'martincv-openai-post-script',
+			'martincv-openai-post',
 			MARTINCV_OPENAI_POST_PLUGIN_URL . 'assets/admin/js/post.js',
 			array( 'jquery' ),
 			MARTINCV_OPENAI_POST_VERSION,
 			true
+		);
+
+		wp_enqueue_style(
+			'martincv-openai-post',
+			MARTINCV_OPENAI_POST_PLUGIN_URL . 'assets/admin/css/post.css',
+			array(),
+			MARTINCV_OPENAI_POST_VERSION
 		);
 	}
 

@@ -26,14 +26,21 @@ class OpenAi {
 	protected $base_url = 'https://api.openai.com/v1/';
 
 	/**
+	 * List of OpenAi Options
+	 *
+	 * @var array
+	 */
+	protected $martincv_openai_post = array();
+
+	/**
 	 * Initialize object
 	 *
 	 * @return void
 	 */
 	private function initialize() {
-		$martincv_openai_post = get_option( '_martincv_openai_post', array() );
+		$this->martincv_openai_post = get_option( '_martincv_openai_post', array() );
 
-		$this->api_key = $martincv_openai_post['api_key'] ?? '';
+		$this->api_key = $this->martincv_openai_post['api_key'] ?? '';
 	}
 
 	/**
@@ -63,8 +70,6 @@ class OpenAi {
 
 		$request_args = wp_parse_args( $args, $default_request_args );
 
-		$request_args['body']['model'] = 'text-davinci-003';
-
 		$request_args['body'] = wp_json_encode( $request_args['body'] );
 
 		$response = wp_remote_post( $this->base_url . $endpoint, $request_args );
@@ -85,51 +90,126 @@ class OpenAi {
 	}
 
 	/**
+	 * Generation completioon
+	 *
+	 * @param  string $prompt The promt send to the AI.
+	 * @param  array  $args   List of additioal arguments to form the request call.
+	 *
+	 * @return WP_Response
+	 */
+	public function completion( $prompt, $args ) {
+		$max_tokens        = $this->martincv_openai_post['max_tokens'] ?? 256;
+		$temperature       = $this->martincv_openai_post['temperature'] ?? 0.7;
+		$top_p             = $this->martincv_openai_post['top_p'] ?? 1;
+		$frequency_penalty = $this->martincv_openai_post['frequency_penalty'] ?? 0;
+		$presence_penalty  = $this->martincv_openai_post['presence_penalty'] ?? 0;
+		$best_of           = $this->martincv_openai_post['best_of'] ?? 1;
+
+		if ( ! empty( $args['max_tokens'] ) ) {
+			$max_tokens = absint( $args['max_tokens'] );
+		}
+
+		if ( ! empty( $args['temperature'] ) ) {
+			$temperature = (float) $args['temperature'];
+		}
+
+		if ( ! empty( $args['top_p'] ) ) {
+			$top_p = (float) $args['top_p'];
+		}
+
+		if ( ! empty( $args['frequency_penalty'] ) ) {
+			$frequency_penalty = (float) $args['frequency_penalty'];
+		}
+
+		if ( ! empty( $args['presence_penalty'] ) ) {
+			$presence_penalty = (float) $args['presence_penalty'];
+		}
+
+		if ( ! empty( $args['best_of'] ) ) {
+			$best_of = absint( $args['best_of'] );
+		}
+
+		$request_args = array(
+			'body' => array(
+				'model'             => 'text-davinci-003',
+				'max_tokens'        => (int) $max_tokens,
+				'temperature'       => (float) $temperature,
+				'top_p'             => (float) $top_p,
+				'frequency_penalty' => (float) $frequency_penalty,
+				'presence_penalty'  => (float) $presence_penalty,
+				'best_of'           => (int) $best_of,
+				'prompt'            => $prompt,
+			),
+		);
+
+		return $this->request( 'completions', $request_args );
+	}
+
+	/**
 	 * Generate post
 	 *
-	 * @param string $post_title Title of the post.
-	 * @param int    $words_number Number of words the post will have.
+	 * @param array $args Post args.
 	 *
 	 * @return string|WP_Error
 	 */
-	public function generate_post( $post_title, $words_number = 500 ) {
-		if ( empty( $post_title ) ) {
+	public function generate_post( $args ) {
+		if ( empty( $args['post_title'] ) ) {
 			return new \WP_Error(
 				400,
 				__( 'Post Title is missing', 'martincv-openai-post' )
 			);
 		}
 
-		if ( ! $words_number ) {
-			return new \WP_Error(
-				400,
-				__( 'Please enter number of words', 'martincv-openai-post' )
-			);
+		$include_introduction = $args['introduction'] ?? false;
+		$include_conclusion   = $args['conclusion'] ?? false;
+		$images_number        = $args['images_number'] ?? 0;
+		$headings_number      = $args['headings_number'] ?? 0;
+
+		$main_prompt = 'Write blog post about "' . $args['post_title'] . '".';
+		if ( $headings_number > 0 ) {
+			$main_prompt .= ' Add ' . $headings_number . ' headings.';
+
+			if ( $include_introduction ) {
+				$main_prompt .= ' Skip introduction.';
+			}
+
+			if ( $include_conclusion ) {
+				$main_prompt .= ' Skip conclusion.';
+			}
 		}
 
-		$prompt = 'Write blog post about "' . $post_title . '" with maximum of ' . $words_number . ' words';
+		$main_response = $this->completion( $main_prompt, $args );
 
-		$request_args = array(
-			'body' => array(
-				'max_tokens'        => 2048,
-				'temperature'       => 0.9,
-				'top_p'             => 1,
-				'frequency_penalty' => 0,
-				'presence_penalty'  => 0,
-				'prompt'            => $prompt,
-			),
-		);
-
-		$response = $this->request( 'completions', $request_args );
-
-		if ( is_wp_error( $response ) ) {
-			return $response;
+		if ( is_wp_error( $main_response ) ) {
+			return $main_response;
 		}
 
-		if ( isset( $response['choices'][0]['text'] ) ) {
-			return $response['choices'][0]['text'];
+		if ( $include_introduction ) {
+			$introduction_prompt = 'Write introduction paragpraph about "' . $args['post_title'] . '".';
+
+			$introduction_response = $this->completion( $introduction_prompt, $args );
 		}
 
-		return '';
+		if ( $include_conclusion ) {
+			$conclusion_prompt = 'Write conclusion paragraph "' . $args['post_title'] . '".';
+
+			$conclusion_response = $this->completion( $conclusion_prompt, $args );
+		}
+
+		$final = '';
+
+		if ( isset( $introduction_response['choices'][0]['text'] ) ) {
+			$final .= '<h3>Introduction</h3>' . $introduction_response['choices'][0]['text'];
+		}
+
+		if ( isset( $main_response['choices'][0]['text'] ) ) {
+			$final .= $main_response['choices'][0]['text'];
+		}
+
+		if ( isset( $conclusion_response['choices'][0]['text'] ) ) {
+			$final .= '<h3>Conclusion</h3>' . $conclusion_response['choices'][0]['text'];
+		}
+
+		return $final;
 	}
 }

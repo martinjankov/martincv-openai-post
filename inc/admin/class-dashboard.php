@@ -43,7 +43,7 @@ class Dashboard {
 			array( $this, 'settings' )
 		);
 	}
-	//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
+
 	/**
 	 * Show the settings form with options
 	 *

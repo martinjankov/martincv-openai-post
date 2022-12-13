@@ -44,10 +44,12 @@ class Post {
 			);
 		}
 
-		$words_number = absint( $_POST['words_number'] ?? 0 );
-		$post_title   = sanitize_text_field( wp_unslash( $_POST['post_title'] ?? '' ) );
+		$args = $_POST;
 
-		$openai_post = \MartinCV\OpenAiPost\OpenAi::get_instance()->generate_post( $post_title, $words_number );
+		unset( $args['action'] );
+		unset( $args['__nonce'] );
+
+		$openai_post = \MartinCV\OpenAiPost\OpenAi::get_instance()->generate_post( $args );
 
 		if ( is_wp_error( $openai_post ) ) {
 			wp_send_json_error(
