@@ -2,6 +2,38 @@
 	$(function () {
 		const $form = $("#martincv-openai-post__form");
 		const $submitButton = $form.find("button");
+		const $imagesNumberField = $form.find("input[name=images_number]");
+
+		let formData = new FormData();
+
+		let imageSizefieldAdded = false;
+
+		const imageSizesField = `<div class="martincv-openai-post__field martincv-openai-post__image-size">
+					<label for="martincv-openai-post__image-size">${martinCVOpenAiPost.selectImageLabel}</label><br>
+					<select name="image_size" id="martincv-openai-post__image-size">
+						<option value="256x256">256x256</option>
+						<option value="512x512" selected>512x512</option>
+						<option value="1024x1024">1024x1024</option>
+					</select>
+				</div>`;
+
+		$imagesNumberField.on("input", function () {
+			const value = $(this).val();
+
+			if (value > 0 && !imageSizefieldAdded) {
+				$imagesNumberField.parent().after(imageSizesField);
+				imageSizefieldAdded = true;
+				formData.append("image_size", "512x512");
+			} else if (value <= 0) {
+				$(document).find(".martincv-openai-post__image-size").remove();
+				imageSizefieldAdded = false;
+			}
+		});
+
+		$(document).on("change", "select[name=image_size]", function () {
+			formData.delete("image_size");
+			formData.append("image_size", $(this).val());
+		});
 
 		$submitButton.on("click", function (e) {
 			e.preventDefault();
@@ -15,7 +47,6 @@
 				title = select("core/editor").getEditedPostAttribute("title");
 			}
 
-			const formData = new FormData();
 			formData.append("post_title", title);
 
 			$form.find("input").each(function () {
@@ -36,21 +67,97 @@
 					$submitButton.text("Processing...");
 				},
 				success: function (response) {
-					let text = response.data.split("\n\n");
+					let aiResponse = response.data.split("###images###");
+					let text = aiResponse[0].split("\n\n");
+					let images = aiResponse[1].split("|");
+					const totalImages = images.length;
+					const totalText = text.length;
+
+					let addImageStep = 1;
+
+					if (totalText - totalImages > 2) {
+						addImageStep = 2;
+					}
+
+					let imageStep = 0;
+					let imageIndex = 0;
 
 					if (typeof wp.data == "undefined") {
 						let content = "";
 						text.forEach(function (p) {
-							content += p;
+							p = p.trim();
+
+							if (p.length === 0) {
+								return;
+							}
+
+							if (p.includes("<h3>")) {
+								content += p;
+							} else {
+								content += "<p>" + p + "</p>";
+							}
+
+							if (
+								images.length &&
+								imageStep % addImageStep === 0 &&
+								typeof images[imageIndex] != "undefined"
+							) {
+								content += images[imageIndex];
+
+								imageIndex++;
+							}
+
+							imageStep++;
 						});
-						tinyMCE.activeEditor.setContent(content);
+						if ($("#wp-content-wrap").hasClass("html-active")) {
+							$("#content").val(content);
+						} else {
+							var activeEditor = tinyMCE.get("content");
+							if (activeEditor !== null) {
+								activeEditor.setContent(content);
+							}
+						}
 					} else {
+						let blocks = [];
 						text.forEach(function (p) {
-							let newBlock = wp.blocks.createBlock("core/paragraph", {
-								content: p,
-							});
-							wp.data.dispatch("core/block-editor").insertBlocks(newBlock);
+							p = p.trim();
+
+							if (p.length === 0) {
+								return;
+							}
+							let newBlock;
+							if (p.includes("<h3>")) {
+								newBlock = wp.blocks.createBlock("core/heading", {
+									content: $(p).text(),
+									level: 3,
+								});
+							} else {
+								newBlock = wp.blocks.createBlock("core/paragraph", {
+									content: p,
+								});
+							}
+
+							blocks.push(newBlock);
+
+							if (
+								images.length &&
+								imageStep % addImageStep === 0 &&
+								typeof images[imageIndex] != "undefined"
+							) {
+								let imgBlock = wp.blocks.createBlock("core/image", {
+									url: $(images[imageIndex]).attr("src"),
+									alt: $(images[imageIndex]).attr("alt"),
+								});
+
+								blocks.push(imgBlock);
+
+								imageIndex++;
+							}
+
+							imageStep++;
 						});
+						console.log(blocks);
+						wp.data.dispatch("core/block-editor").insertBlocks(blocks);
 					}
 
 					$submitButton.prop("disabled", false);

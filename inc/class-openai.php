@@ -146,6 +146,34 @@ class OpenAi {
 	}
 
 	/**
+	 * Generate image(s) using OpenAi
+	 *
+	 * @param  string $prompt        What the images to be realated to.
+	 * @param  int    $images_number Number of images to be generated.
+	 * @param  string $size          Images size.
+	 *
+	 * @return array
+	 */
+	public function image( $prompt, $images_number, $size ) {
+		if ( ! in_array( $size, array( '256x256', '512x512', '1024x1024' ), true ) ) {
+			return new \WP_Error(
+				400,
+				__( 'Unsupported image size', 'martincv-openai-post' )
+			);
+		}
+
+		$request_args = array(
+			'body' => array(
+				'prompt' => sanitize_text_field( $prompt ),
+				'n'      => absint( $images_number ),
+				'size'   => $size,
+			),
+		);
+
+		return $this->request( 'images/generations', $request_args );
+	}
+
+	/**
 	 * Generate post
 	 *
 	 * @param array $args Post args.
@@ -199,7 +227,7 @@ class OpenAi {
 		$final = '';
 
 		if ( isset( $introduction_response['choices'][0]['text'] ) ) {
-			$final .= '<h3>Introduction</h3>' . $introduction_response['choices'][0]['text'];
+			$final .= "\n\n<h3>Introduction</h3>\n\n" . $introduction_response['choices'][0]['text'];
 		}
 
 		if ( isset( $main_response['choices'][0]['text'] ) ) {
@@ -207,9 +235,28 @@ class OpenAi {
 		}
 
 		if ( isset( $conclusion_response['choices'][0]['text'] ) ) {
-			$final .= '<h3>Conclusion</h3>' . $conclusion_response['choices'][0]['text'];
+			$final .= "\n\n<h3>Conclusion</h3>\n\n" . $conclusion_response['choices'][0]['text'];
 		}
 
-		return $final;
+		$images_tags = array();
+
+		if ( absint( $args['images_number'] ?? 0 ) ) {
+			$image_prompt = $args['post_title'];
+
+			$images = $this->image( $image_prompt, $args['images_number'], $args['image_size'] );
+
+			if ( is_wp_error( $images ) ) {
+				return $images;
+			}
+
+			if ( ! empty( $images['data'] ) ) {
+				$image_size = explode( 'x', $args['image_size'] );
+				foreach ( $images['data'] as $img_url ) {
+					$images_tags[] = '<img src="' . esc_url( $img_url['url'] ) . '" alt="' . esc_attr( $args['post_title'] ) . '" height="' . esc_attr( $image_size[0] ) . '" width="' . esc_attr( $image_size[1] ) . '">';
+				}
+			}
+		}
+
+		return $final . '###images###' . implode( '|', $images_tags );
 	}
 }

@@ -59,6 +59,14 @@ class Post {
 			true
 		);
 
+		wp_localize_script(
+			'martincv-openai-post',
+			'martinCVOpenAiPost',
+			array(
+				'selectImageLabel' => __( 'Select image size', 'martincv-openai-post' ),
+			)
+		);
+
 		wp_enqueue_style(
 			'martincv-openai-post',
 			MARTINCV_OPENAI_POST_PLUGIN_URL . 'assets/admin/css/post.css',
