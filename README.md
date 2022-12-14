@@ -1,5 +1,4 @@
 === MartinCV OpenAi Post ===
-Contributors: martin7ba
 Donate link: https://www.martincv.com/whp-donate
 Tags: openai, blog post, post, generate post
 Requires at least: 5.0
@@ -48,6 +47,13 @@ If you need any additional help fell free to contact me at [martin@martincv.com]
 = This plugin saved me a lot of work. Where can I donate? =
 
 Thanks, donations help us to continue improving our plugins. [Read More About Donations.](https://www.martincv.com/whp-donate/)
+https://wordpress.org/plugins/martincv-openai-blog-post/
+
+Depending on the settings set, the request might take more time. It also depends how busy the OpenAi is.
+
+= The generated image was broken. Why? =
+
+The OpenAi image generation sometimes might return broken image. This is probably because the image was deleted after the OpenAi first e encountered it.
 
 == Screenshots ==
 
