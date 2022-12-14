@@ -44,12 +44,13 @@ class Post {
 			);
 		}
 
-		$args = $_POST;
+		unset( $_POST['action'] );
+		unset( $_POST['__nonce'] );
 
-		unset( $args['action'] );
-		unset( $args['__nonce'] );
-
-		$openai_post = \MartinCV\OpenAiPost\OpenAi::get_instance()->generate_post( $args );
+		// Validaion and sanitization is done in the OpenAi class, because the methods of that class
+		// can be called call from other classes and to avoid doing sanitization in every class where
+		// those methods are called, it is better to sanitize and validate in the end method.
+		$openai_post = \MartinCV\OpenAiPost\OpenAi::get_instance()->generate_post( $_POST );
 
 		if ( is_wp_error( $openai_post ) ) {
 			wp_send_json_error(

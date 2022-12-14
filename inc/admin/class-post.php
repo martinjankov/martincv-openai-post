@@ -99,6 +99,8 @@ class Post {
 	 * @return void
 	 */
 	public function metabox_callback( $post ) {
+		$martincv_openai_post = get_option( '_martincv_openai_post', array() );
+
 		require_once MARTINCV_OPENAI_POST_PLUGIN_DIR . 'views/admin/template-admin-post-metabox.php';
 	}
 }

@@ -15,3 +15,11 @@
 .martincv-openai-post__field a {
 	font-size: 12px;
 }
+
+.martincv-openai-post-settings {
+	display: none;
+}
+
+.martincv-openai-post-settings label, .martincv-openai-post-settings input {
+	display: block !important;
+}

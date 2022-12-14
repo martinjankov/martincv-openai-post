@@ -245,11 +245,7 @@ class OpenAi {
 
 			$images = $this->image( $image_prompt, $args['images_number'], $args['image_size'] );
 
-			if ( is_wp_error( $images ) ) {
-				return $images;
-			}
-
-			if ( ! empty( $images['data'] ) ) {
+			if ( ! is_wp_error( $images ) && ! empty( $images['data'] ) ) {
 				$image_size = explode( 'x', $args['image_size'] );
 				foreach ( $images['data'] as $img_url ) {
 					$images_tags[] = '<img src="' . esc_url( $img_url['url'] ) . '" alt="' . esc_attr( $args['post_title'] ) . '" height="' . esc_attr( $image_size[0] ) . '" width="' . esc_attr( $image_size[1] ) . '">';

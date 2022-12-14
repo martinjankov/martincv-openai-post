@@ -67,6 +67,10 @@
 					$submitButton.text("Processing...");
 				},
 				success: function (response) {
+					if (!response.success) {
+						alert(response.data);
+						return;
+					}
 					let aiResponse = response.data.split("###images###");
 					let text = aiResponse[0].split("\n\n");
 					let images = aiResponse[1].split("|");
@@ -100,7 +104,8 @@
 							if (
 								images.length &&
 								imageStep % addImageStep === 0 &&
-								typeof images[imageIndex] != "undefined"
+								typeof images[imageIndex] != "undefined" &&
+								images[imageIndex].trim().length
 							) {
 								content += images[imageIndex];
 
@@ -142,7 +147,8 @@
 							if (
 								images.length &&
 								imageStep % addImageStep === 0 &&
-								typeof images[imageIndex] != "undefined"
+								typeof images[imageIndex] != "undefined" &&
+								images[imageIndex].trim().length
 							) {
 								let imgBlock = wp.blocks.createBlock("core/image", {
 									url: $(images[imageIndex]).attr("src"),
@@ -156,7 +162,7 @@
 
 							imageStep++;
 						});
-						console.log(blocks);
+
 						wp.data.dispatch("core/block-editor").insertBlocks(blocks);
 					}
 
@@ -169,6 +175,11 @@
 					$submitButton.text("Generate Post");
 				},
 			});
+		});
+
+		$("#martincv-openai-settings-overwrite").on("click", function (e) {
+			e.preventDefault();
+			$(".martincv-openai-post-settings").slideToggle();
 		});
 	});
 })(jQuery);
